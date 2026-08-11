@@ -42,7 +42,8 @@ header h1{font-size:1.3rem;}
 .kpi{background:var(--primario-bg);border-radius:10px;padding:14px;text-align:center;}
 .kpi .valor{font-family:'DM Serif Display',serif;font-size:1.5rem;color:var(--primario-d);}
 .kpi .etiqueta{font-size:0.7rem;color:var(--txt-s);margin-top:2px;}
-canvas{max-height:280px;}
+.chart-wrap{position:relative;height:260px;width:100%;padding:4px 4px 0;}
+.chart-wrap canvas{max-width:100%;}
 table{width:100%;border-collapse:collapse;font-size:0.83rem;margin-top:10px;}
 th{text-align:left;padding:8px 6px;background:var(--primario-bg);color:var(--primario-d);font-size:0.72rem;text-transform:uppercase;}
 td{padding:8px 6px;border-bottom:1px solid var(--borde);}
@@ -51,6 +52,10 @@ td{padding:8px 6px;border-bottom:1px solid var(--borde);}
 .sem-alerta{background:var(--ambar);}
 .sem-mal{background:var(--rojo);}
 .empty{color:var(--txt-s);font-size:0.85rem;text-align:center;padding:30px;}
+.empty-chart{
+  display:flex;align-items:center;justify-content:center;height:220px;
+  color:var(--txt-s);font-size:0.85rem;background:var(--fondo-secundario);border-radius:10px;
+}
 </style>
 </head>
 <body>
@@ -75,12 +80,18 @@ td{padding:8px 6px;border-bottom:1px solid var(--borde);}
 
   <div class="tarjeta">
     <h2 style="font-size:1.1rem;margin-bottom:10px;">Pergamino procesado por lote</h2>
-    <canvas id="chartMateriaPrima"></canvas>
+    <div class="chart-wrap">
+      <canvas id="chartMateriaPrima"></canvas>
+      <div class="empty-chart" id="vacioMateriaPrima" style="display:none;">Sin lotes este mes</div>
+    </div>
   </div>
 
   <div class="tarjeta">
     <h2 style="font-size:1.1rem;margin-bottom:10px;">Costo por unidad — curva de comportamiento</h2>
-    <canvas id="chartCostoUnd"></canvas>
+    <div class="chart-wrap">
+      <canvas id="chartCostoUnd"></canvas>
+      <div class="empty-chart" id="vacioCostoUnd" style="display:none;">Sin lotes este mes</div>
+    </div>
   </div>
 
   <div class="tarjeta">
@@ -93,7 +104,10 @@ td{padding:8px 6px;border-bottom:1px solid var(--borde);}
       <h2 style="font-size:1.1rem;">Histórico anual</h2>
       <select id="selAnioHist" style="margin-left:auto;"></select>
     </div>
-    <canvas id="chartHistorico"></canvas>
+    <div class="chart-wrap">
+      <canvas id="chartHistorico"></canvas>
+      <div class="empty-chart" id="vacioHistorico" style="display:none;">Sin lotes registrados este año</div>
+    </div>
   </div>
 
 </div>
@@ -174,8 +188,16 @@ function renderizarMes(){
     document.getElementById('tablaLotes').innerHTML = '<div class="empty">Sin datos.</div>';
     if (chartMP) chartMP.destroy();
     if (chartCU) chartCU.destroy();
+    document.getElementById('chartMateriaPrima').style.display = 'none';
+    document.getElementById('chartCostoUnd').style.display = 'none';
+    document.getElementById('vacioMateriaPrima').style.display = 'flex';
+    document.getElementById('vacioCostoUnd').style.display = 'flex';
     return;
   }
+  document.getElementById('chartMateriaPrima').style.display = 'block';
+  document.getElementById('chartCostoUnd').style.display = 'block';
+  document.getElementById('vacioMateriaPrima').style.display = 'none';
+  document.getElementById('vacioCostoUnd').style.display = 'none';
 
   const totalLotes = lotesMes.length;
   const totalPergamino = lotesMes.reduce((s,l) => s + (l.vars.kg_pergamino||0), 0);
@@ -198,15 +220,43 @@ function renderizarMes(){
   if (chartMP) chartMP.destroy();
   chartMP = new Chart(document.getElementById('chartMateriaPrima'), {
     type:'bar',
-    data:{labels, datasets:[{label:'Kg pergamino', data:dataMP, backgroundColor:COLOR_PRIMARIO, borderRadius:6}]},
-    options:{plugins:{legend:{display:false}, ...pluginEtiquetas('kg', false)}}
+    data:{labels, datasets:[{
+      label:'Kg pergamino', data:dataMP, backgroundColor:COLOR_PRIMARIO, borderRadius:6,
+      maxBarThickness: 56, categoryPercentage: 0.6, barPercentage: 0.85,
+    }]},
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      layout:{padding:{top:8, right:8, bottom:0, left:0}},
+      scales:{
+        x:{grid:{display:false}, ticks:{color:'#7A6A57', font:{size:11}}},
+        y:{beginAtZero:true, grid:{color:'#EFE2CC'}, ticks:{color:'#7A6A57', font:{size:11}}},
+      },
+      plugins:{
+        legend:{display:false},
+        tooltip:{callbacks:{label: ctx => ` ${ctx.parsed.y.toFixed(1)} kg`}},
+      },
+    }
   });
 
   if (chartCU) chartCU.destroy();
   chartCU = new Chart(document.getElementById('chartCostoUnd'), {
     type:'line',
-    data:{labels, datasets:[{label:'Costo/und', data:dataCU, borderColor:COLOR_ALERTA, backgroundColor:'rgba(183,28,28,0.1)', tension:0.3, fill:true}]},
-    options:{plugins:{legend:{display:false}}}
+    data:{labels, datasets:[{
+      label:'Costo/und', data:dataCU, borderColor:COLOR_ALERTA, backgroundColor:'rgba(183,28,28,0.1)',
+      tension:0.3, fill:true, pointRadius:4, pointBackgroundColor:COLOR_ALERTA, pointHoverRadius:6,
+    }]},
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      layout:{padding:{top:8, right:8, bottom:0, left:0}},
+      scales:{
+        x:{grid:{display:false}, ticks:{color:'#7A6A57', font:{size:11}}},
+        y:{beginAtZero:true, grid:{color:'#EFE2CC'}, ticks:{color:'#7A6A57', font:{size:11}, callback:v=>'S/'+v}},
+      },
+      plugins:{
+        legend:{display:false},
+        tooltip:{callbacks:{label: ctx => ` S/ ${ctx.parsed.y.toFixed(2)}`}},
+      },
+    }
   });
 
   let html = '<table><tr><th></th><th>Lote</th><th>Fecha</th><th>Kg pergamino</th><th>Unidades</th><th>Costo/und</th></tr>';
@@ -217,12 +267,6 @@ function renderizarMes(){
   });
   html += '</table>';
   document.getElementById('tablaLotes').innerHTML = html;
-}
-
-function pluginEtiquetas(prefijo, esHistorico){
-  return {
-    datalabels: undefined // placeholder — Chart.js sin plugin externo, mantenemos simple
-  };
 }
 
 function renderizarHistorico(){
@@ -238,15 +282,32 @@ function renderizarHistorico(){
   const labels = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
   const curvaPergamino = porMes.map(m => m.nLotes > 0 ? m.pergamino : null);
   const curvaCapital = porMes.map(m => m.nLotes > 0 ? m.capital : null);
+  const hayDatosAnio = porMes.some(m => m.nLotes > 0);
+
+  document.getElementById('chartHistorico').style.display = hayDatosAnio ? 'block' : 'none';
+  document.getElementById('vacioHistorico').style.display = hayDatosAnio ? 'none' : 'flex';
+  if (!hayDatosAnio){
+    if (chartHist) chartHist.destroy();
+    return;
+  }
 
   if (chartHist) chartHist.destroy();
   chartHist = new Chart(document.getElementById('chartHistorico'), {
     type:'line',
     data:{labels, datasets:[
-      {label:'Kg pergamino/mes', data:curvaPergamino, borderColor:COLOR_PRIMARIO, spanGaps:false, tension:0.3},
-      {label:'Capital de trabajo/mes', data:curvaCapital, borderColor:COLOR_SECUNDARIO, spanGaps:false, tension:0.3},
+      {label:'Kg pergamino/mes', data:curvaPergamino, borderColor:COLOR_PRIMARIO, backgroundColor:COLOR_PRIMARIO, spanGaps:false, tension:0.3, pointRadius:4, pointHoverRadius:6},
+      {label:'Capital de trabajo/mes', data:curvaCapital, borderColor:COLOR_SECUNDARIO, backgroundColor:COLOR_SECUNDARIO, spanGaps:false, tension:0.3, pointRadius:4, pointHoverRadius:6, yAxisID:'y1'},
     ]},
-    options:{plugins:{legend:{position:'bottom'}}}
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      layout:{padding:{top:8, right:8, bottom:0, left:0}},
+      scales:{
+        x:{grid:{display:false}, ticks:{color:'#7A6A57', font:{size:11}}},
+        y:{beginAtZero:true, grid:{color:'#EFE2CC'}, ticks:{color:'#7A6A57', font:{size:11}}, title:{display:true, text:'Kg pergamino', color:'#7A6A57', font:{size:10}}},
+        y1:{beginAtZero:true, position:'right', grid:{display:false}, ticks:{color:'#7A6A57', font:{size:11}}, title:{display:true, text:'Capital S/', color:'#7A6A57', font:{size:10}}},
+      },
+      plugins:{legend:{position:'bottom', labels:{color:'#2A1B10', font:{size:11}, usePointStyle:true}}},
+    }
   });
 }
 
