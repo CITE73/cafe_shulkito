@@ -182,7 +182,7 @@ table.costos tr.total td{font-weight:700;color:#fff;background:var(--primario);b
     <div class="fila-2">
       <div class="campo">
         <label>Café pergamino (kg)</label>
-        <input type="number" id="kgPergamino" value="100" min="0" step="0.1" oninput="recalcularTodo()">
+        <input type="number" id="kgPergamino" value="110" min="0" step="0.1" oninput="recalcularTodo()">
       </div>
       <div class="campo">
         <label>Precio pergamino (S/ / kg)</label>
@@ -282,7 +282,7 @@ const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzzQH8M5neY_Y2t
 const NOMBRE_EMPRESA = 'Corporación Nieves E.I.R.L.';
 const CAPACIDAD_MAX_KG_MES = 220; // kg de café pergamino/mes — base de prorrateo de fijos
 
-// Balance de materia (base: 100 kg pergamino) — % merma por etapa, tomado del Excel
+// Balance de materia (base: 110 kg pergamino) — % merma por etapa, tomado del Excel
 const ETAPAS = [
   {nombre:'1. Recepción',            merma:0.0000, hMaq:0.16666666666666666, hHom:0.3333333333333333},
   {nombre:'2. Trillado y pulido',    merma:0.2200, hMaq:1.0000000000000000,  hHom:0.5},
