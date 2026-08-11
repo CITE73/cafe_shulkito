@@ -163,7 +163,7 @@ table.costos tr.total td{font-weight:700;color:#fff;background:var(--primario);b
   <div class="fila">
     <div>
       <h1>☕ Café Tostado y Molido</h1>
-      <p>CORPORACIÓN NIEVES E.I.R.L</p>
+      <p>Corporación Nieves E.I.R.L.</p>
     </div>
     <span class="badge" id="badgeConexion"><span class="dot" id="dotConexion"></span><span id="txtConexion">Sincronizado</span></span>
   </div>
@@ -279,8 +279,8 @@ table.costos tr.total td{font-weight:700;color:#fff;background:var(--primario);b
 <script>
 // ============ CONFIGURACIÓN ============
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzzQH8M5neY_Y2tI6EBFjqzInpJCwAdjvzYjzGUycOyXHNvwLuWXM_3rsPNcJ5GhKspCQ/exec';
-const NOMBRE_EMPRESA = 'CORPORACIÓN NIEVES E.I.R.L';
-const CAPACIDAD_MAX_KG_MES = 200; // kg de café pergamino/mes — base de prorrateo de fijos
+const NOMBRE_EMPRESA = 'Corporación Nieves E.I.R.L.';
+const CAPACIDAD_MAX_KG_MES = 220; // kg de café pergamino/mes — base de prorrateo de fijos
 
 // Balance de materia (base: 100 kg pergamino) — % merma por etapa, tomado del Excel
 const ETAPAS = [
@@ -456,7 +456,7 @@ function pintarRentabilidad(r){
   `;
 
   // Tabla comparativa por volumen
-  const volumenes = [50, 100, 150, 200, 300];
+  const volumenes = [50, 100, 150, 220, 300];
   let html = '<tr><th>Kg pergamino</th><th>Unidades</th><th>Costo/und</th><th>Precio venta</th></tr>';
   volumenes.forEach(kg => {
     const kgOriginal = document.getElementById('kgPergamino').value;
