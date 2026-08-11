@@ -243,7 +243,6 @@ table.costos tr.total td{font-weight:700;color:#fff;background:var(--primario);b
       <h3 style="font-size:0.95rem;margin:16px 0 8px;color:var(--primario-d);">Tiempos del lote</h3>
       <div class="proceso-item"><span class="nom">Horas máquina totales</span><span class="val" id="valHorasMaquina">—</span></div>
       <div class="proceso-item"><span class="nom">Horas hombre totales</span><span class="val" id="valHorasHombre">—</span></div>
-      <div class="proceso-item"><span class="nom">Consumo de gas (tostado)</span><span class="val" id="valGas">—</span></div>
     </div>
   </div>
 
@@ -299,8 +298,6 @@ const ETAPAS = [
 // Costos variables por kg de PERGAMINO procesado (base 100 kg del Excel)
 const COSTO_SERVICIO_CITE_POR_100KG = 215.4232507915995; // tarifa Kg/hora, 6 máquinas
 const COSTO_MOD_POR_100KG = 6.731344979166666; // mano de obra directa
-const CONSUMO_GAS_KG_POR_100KG = 8.738666666666665;
-const TARIFA_GAS_KG = 4; // S//kg de gas
 
 // Empaque — por unidad de producto terminado (no por kg pergamino)
 const COSTO_ETIQUETA_UND = 0.3;
@@ -312,7 +309,6 @@ const COSTO_EPP_DIA = 0.6 + 0.2 + 2 + 0.2 + 0.5 + 0.4 + 0.5; // 4.4
 
 // Gastos administrativos MENSUALES (se prorratean según CAPACIDAD_MAX_KG_MES)
 const GASTOS_FIJOS_MES = {
-  'Jefe de planta': 1300,
   'Marketing Digital': 350,
   'Contabilidad': 100,
 };
@@ -352,8 +348,6 @@ function calcularLote(){
   const costoMateriaPrima = kgPergamino * precioPergamino;
   const costoServicioCite = COSTO_SERVICIO_CITE_POR_100KG * factor;
   const costoMOD = COSTO_MOD_POR_100KG * factor;
-  const consumoGasKg = CONSUMO_GAS_KG_POR_100KG * factor;
-  const costoGas = consumoGasKg * TARIFA_GAS_KG;
   const costoEtiqueta = unidadesProducidas * COSTO_ETIQUETA_UND;
   const costoBolsaPP = unidadesProducidas * COSTO_BOLSA_PP_UND;
   const costoEPP = COSTO_EPP_DIA; // costo del día de trabajo del lote
@@ -374,7 +368,7 @@ function calcularLote(){
     totalFijos += prorrateado;
   }
 
-  const totalVariables = costoMateriaPrima + costoServicioCite + costoMOD + costoGas +
+  const totalVariables = costoMateriaPrima + costoServicioCite + costoMOD +
                           costoEtiqueta + costoBolsaPP + costoEPP + costoFleteTotal;
   const capitalTrabajo = totalVariables + totalFijos;
   const costoUnidad = unidadesProducidas > 0 ? capitalTrabajo / unidadesProducidas : 0;
@@ -386,8 +380,8 @@ function calcularLote(){
   return {
     kgPergamino, precioPergamino, presentacionG, pctUtilidad,
     etapasCalc, kgTerminado, rendimientoPct, unidadesProducidas,
-    horasMaquinaTotal, horasHombreTotal, consumoGasKg,
-    costoMateriaPrima, costoServicioCite, costoMOD, costoGas,
+    horasMaquinaTotal, horasHombreTotal,
+    costoMateriaPrima, costoServicioCite, costoMOD,
     costoEtiqueta, costoBolsaPP, costoEPP,
     costoFlete1, costoFlete2, costoFlete3, costoFleteTotal,
     gastosFijosProrrateados, totalFijos, factorCapacidad,
@@ -426,7 +420,6 @@ function pintarProduccion(r){
 
   document.getElementById('valHorasMaquina').textContent = fmt(r.horasMaquinaTotal,2)+' h';
   document.getElementById('valHorasHombre').textContent = fmt(r.horasHombreTotal,2)+' h';
-  document.getElementById('valGas').textContent = fmt(r.consumoGasKg,2)+' kg';
 }
 
 function pintarCostos(r){
@@ -435,7 +428,6 @@ function pintarCostos(r){
     <tr><td>Materia prima (café pergamino)</td><td class="num">${fmt(r.costoMateriaPrima)}</td></tr>
     <tr><td>Servicio CITE (maquila — 6 máquinas)</td><td class="num">${fmt(r.costoServicioCite)}</td></tr>
     <tr><td>Mano de obra directa</td><td class="num">${fmt(r.costoMOD)}</td></tr>
-    <tr><td>Gas (tostado)</td><td class="num">${fmt(r.costoGas)}</td></tr>
     <tr><td>Etiquetas</td><td class="num">${fmt(r.costoEtiqueta)}</td></tr>
     <tr><td>Bolsas polipropileno</td><td class="num">${fmt(r.costoBolsaPP)}</td></tr>
     <tr><td>EPP (equipos de protección)</td><td class="num">${fmt(r.costoEPP)}</td></tr>
@@ -520,7 +512,6 @@ function guardarLote(){
       flete_jaen_aucayacu: r.costoFlete2,
       flete_aucayacu_cite: r.costoFlete3,
       costo_servicio_cite: r.costoServicioCite,
-      consumo_gas_kg: r.consumoGasKg,
       precio_venta: r.precioVentaUnidad,
       impuesto_renta_pct: 1.5,
     }),
