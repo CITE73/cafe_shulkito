@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard — Café Tostado y Molido</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+:root{
+  --fondo-base:#FAF6F0;
+  --fondo-secundario:#F1E7D8;
+  --primario:#6B3A1F;
+  --primario-d:#3B1F0A;
+  --primario-bg:#EFE2CC;
+  --ambar:#C77700;
+  --verde:#1B7A3D;
+  --rojo:#B71C1C;
+  --txt:#2A1B10;
+  --txt-s:#7A6A57;
+  --borde:#E0D2BB;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'DM Sans',sans-serif;background:var(--fondo-base);color:var(--txt);padding-bottom:40px;}
+h1,h2{font-family:'DM Serif Display',serif;font-weight:400;}
+header{
+  background:linear-gradient(135deg,var(--primario-d),var(--primario));color:#fff;
+  padding:20px 18px;position:sticky;top:0;z-index:50;
+}
+header .fila{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;}
+header h1{font-size:1.3rem;}
+.btn-nav{
+  background:rgba(255,255,255,0.15);color:#fff;border:1px solid rgba(255,255,255,0.3);
+  padding:8px 14px;border-radius:8px;font-size:0.82rem;cursor:pointer;text-decoration:none;font-weight:600;
+}
+.contenedor{max-width:900px;margin:0 auto;padding:16px;}
+.tarjeta{background:#fff;border:1px solid var(--borde);border-radius:14px;padding:18px;margin-bottom:16px;box-shadow:0 2px 10px rgba(59,31,10,0.08);}
+.filtros{display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
+.filtros select{padding:8px 12px;border:1.5px solid var(--borde);border-radius:8px;font-family:'DM Sans',sans-serif;}
+.filtros button{padding:8px 14px;background:var(--primario);color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:600;}
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin:14px 0;}
+.kpi{background:var(--primario-bg);border-radius:10px;padding:14px;text-align:center;}
+.kpi .valor{font-family:'DM Serif Display',serif;font-size:1.5rem;color:var(--primario-d);}
+.kpi .etiqueta{font-size:0.7rem;color:var(--txt-s);margin-top:2px;}
+canvas{max-height:280px;}
+table{width:100%;border-collapse:collapse;font-size:0.83rem;margin-top:10px;}
+th{text-align:left;padding:8px 6px;background:var(--primario-bg);color:var(--primario-d);font-size:0.72rem;text-transform:uppercase;}
+td{padding:8px 6px;border-bottom:1px solid var(--borde);}
+.semaforo{width:10px;height:10px;border-radius:50%;display:inline-block;}
+.sem-ok{background:var(--verde);}
+.sem-alerta{background:var(--ambar);}
+.sem-mal{background:var(--rojo);}
+.empty{color:var(--txt-s);font-size:0.85rem;text-align:center;padding:30px;}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="fila">
+    <div><h1>📊 Dashboard — Café Tostado y Molido</h1></div>
+    <a href="asistente_cafe_v1.html" class="btn-nav">← Volver a Planta</a>
+  </div>
+</header>
+
+<div class="contenedor">
+
+  <div class="tarjeta">
+    <div class="filtros">
+      <select id="selMes"></select>
+      <select id="selAnio"></select>
+      <button onclick="cargarDatos()">🔄 Actualizar</button>
+    </div>
+    <div class="kpi-grid" id="kpisMes"></div>
+  </div>
+
+  <div class="tarjeta">
+    <h2 style="font-size:1.1rem;margin-bottom:10px;">Pergamino procesado por lote</h2>
+    <canvas id="chartMateriaPrima"></canvas>
+  </div>
+
+  <div class="tarjeta">
+    <h2 style="font-size:1.1rem;margin-bottom:10px;">Costo por unidad — curva de comportamiento</h2>
+    <canvas id="chartCostoUnd"></canvas>
+  </div>
+
+  <div class="tarjeta">
+    <h2 style="font-size:1.1rem;margin-bottom:10px;">Detalle de lotes del mes</h2>
+    <div id="tablaLotes"></div>
+  </div>
+
+  <div class="tarjeta">
+    <div class="filtros" style="margin-bottom:10px;">
+      <h2 style="font-size:1.1rem;">Histórico anual</h2>
+      <select id="selAnioHist" style="margin-left:auto;"></select>
+    </div>
+    <canvas id="chartHistorico"></canvas>
+  </div>
+
+</div>
+
+<script>
+const APPS_SCRIPT_URL = 'PEGAR_AQUI_URL_APPS_SCRIPT_/exec';
+const COLOR_PRIMARIO   = '#6B3A1F';
+const COLOR_SECUNDARIO = '#C77700';
+const COLOR_ACENTO     = '#3B1F0A';
+const COLOR_ALERTA     = '#B71C1C';
+const COLOR_OK         = '#1B7A3D';
+
+let TODOS_LOS_LOTES = [];
+let chartMP, chartCU, chartHist;
+
+function parsearFecha(v){
+  if (!v) return null;
+  if (v instanceof Date) return v;
+  if (typeof v === 'string'){
+    if (v.includes('/')){
+      const [d,m,y] = v.split('/').map(Number);
+      return new Date(y, m-1, d);
+    }
+    const d = new Date(v);
+    if (!isNaN(d)) return d;
+  }
+  return null;
+}
+
+function inicializarSelectores(){
+  const selMes = document.getElementById('selMes');
+  const meses = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  meses.forEach((m,i) => {
+    const opt = document.createElement('option'); opt.value=i; opt.textContent=m;
+    if (i === new Date().getMonth()) opt.selected = true;
+    selMes.appendChild(opt);
+  });
+
+  const anioActual = new Date().getFullYear();
+  ['selAnio','selAnioHist'].forEach(id => {
+    const sel = document.getElementById(id);
+    for (let y = anioActual - 2; y <= anioActual + 2; y++){
+      const opt = document.createElement('option'); opt.value=y; opt.textContent=y;
+      if (y === anioActual) opt.selected = true;
+      sel.appendChild(opt);
+    }
+  });
+}
+
+async function cargarDatos(){
+  try {
+    if (APPS_SCRIPT_URL.includes('PEGAR_AQUI')){
+      document.getElementById('kpisMes').innerHTML = '<div class="empty">Configura APPS_SCRIPT_URL para conectar con Google Sheets.</div>';
+      return;
+    }
+    const resp = await fetch(`${APPS_SCRIPT_URL}?action=datos&producto=cafe_tostado_molido`);
+    const data = await resp.json();
+    TODOS_LOS_LOTES = (data.registros || data || []).map(r => ({
+      ...r,
+      fecha: parsearFecha(r.fecha_proceso),
+      vars: (() => { try { return JSON.parse(r.variables_json||'{}'); } catch(e){ return {}; } })(),
+    }));
+    renderizarMes();
+    renderizarHistorico();
+  } catch(err){
+    console.error('Error cargando datos:', err);
+    document.getElementById('kpisMes').innerHTML = '<div class="empty">No se pudo conectar. Revisa la URL de Apps Script.</div>';
+  }
+}
+
+function renderizarMes(){
+  const mes = parseInt(document.getElementById('selMes').value);
+  const anio = parseInt(document.getElementById('selAnio').value);
+  const lotesMes = TODOS_LOS_LOTES.filter(l => l.fecha && l.fecha.getMonth()===mes && l.fecha.getFullYear()===anio);
+
+  if (lotesMes.length === 0){
+    document.getElementById('kpisMes').innerHTML = '<div class="empty">Sin lotes registrados este mes.</div>';
+    document.getElementById('tablaLotes').innerHTML = '<div class="empty">Sin datos.</div>';
+    if (chartMP) chartMP.destroy();
+    if (chartCU) chartCU.destroy();
+    return;
+  }
+
+  const totalLotes = lotesMes.length;
+  const totalPergamino = lotesMes.reduce((s,l) => s + (l.vars.kg_pergamino||0), 0);
+  const totalUnidades = lotesMes.reduce((s,l) => s + (l.unidades_producidas||0), 0);
+  const costoPromUnd = lotesMes.reduce((s,l) => s + (l.costo_und_prod||0), 0) / totalLotes;
+  const totalCapital = lotesMes.reduce((s,l) => s + (l.capital_trabajo||0), 0);
+
+  document.getElementById('kpisMes').innerHTML = `
+    <div class="kpi"><div class="valor">${totalLotes}</div><div class="etiqueta">Lotes</div></div>
+    <div class="kpi"><div class="valor">${totalPergamino.toFixed(0)}</div><div class="etiqueta">Kg pergamino</div></div>
+    <div class="kpi"><div class="valor">${totalUnidades.toFixed(0)}</div><div class="etiqueta">Unidades</div></div>
+    <div class="kpi"><div class="valor">S/${costoPromUnd.toFixed(2)}</div><div class="etiqueta">Costo/und prom.</div></div>
+    <div class="kpi"><div class="valor">S/${totalCapital.toFixed(0)}</div><div class="etiqueta">Capital de trabajo</div></div>
+  `;
+
+  const labels = lotesMes.map(l => l.lote);
+  const dataMP = lotesMes.map(l => l.vars.kg_pergamino||0);
+  const dataCU = lotesMes.map(l => l.costo_und_prod||0);
+
+  if (chartMP) chartMP.destroy();
+  chartMP = new Chart(document.getElementById('chartMateriaPrima'), {
+    type:'bar',
+    data:{labels, datasets:[{label:'Kg pergamino', data:dataMP, backgroundColor:COLOR_PRIMARIO, borderRadius:6}]},
+    options:{plugins:{legend:{display:false}, ...pluginEtiquetas('kg', false)}}
+  });
+
+  if (chartCU) chartCU.destroy();
+  chartCU = new Chart(document.getElementById('chartCostoUnd'), {
+    type:'line',
+    data:{labels, datasets:[{label:'Costo/und', data:dataCU, borderColor:COLOR_ALERTA, backgroundColor:'rgba(183,28,28,0.1)', tension:0.3, fill:true}]},
+    options:{plugins:{legend:{display:false}}}
+  });
+
+  let html = '<table><tr><th></th><th>Lote</th><th>Fecha</th><th>Kg pergamino</th><th>Unidades</th><th>Costo/und</th></tr>';
+  lotesMes.forEach(l => {
+    const cu = l.costo_und_prod||0;
+    const sem = cu < costoPromUnd*0.95 ? 'sem-ok' : (cu > costoPromUnd*1.1 ? 'sem-mal' : 'sem-alerta');
+    html += `<tr><td><span class="semaforo ${sem}"></span></td><td>${l.lote}</td><td>${l.fecha_proceso}</td><td>${(l.vars.kg_pergamino||0).toFixed(1)}</td><td>${l.unidades_producidas}</td><td>S/${cu.toFixed(2)}</td></tr>`;
+  });
+  html += '</table>';
+  document.getElementById('tablaLotes').innerHTML = html;
+}
+
+function pluginEtiquetas(prefijo, esHistorico){
+  return {
+    datalabels: undefined // placeholder — Chart.js sin plugin externo, mantenemos simple
+  };
+}
+
+function renderizarHistorico(){
+  const anio = parseInt(document.getElementById('selAnioHist').value);
+  const porMes = Array.from({length:12}, (_,i) => {
+    const lotesM = TODOS_LOS_LOTES.filter(l => l.fecha && l.fecha.getFullYear()===anio && l.fecha.getMonth()===i);
+    return {
+      nLotes: lotesM.length,
+      pergamino: lotesM.reduce((s,l)=>s+(l.vars.kg_pergamino||0),0),
+      capital: lotesM.reduce((s,l)=>s+(l.capital_trabajo||0),0),
+    };
+  });
+  const labels = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  const curvaPergamino = porMes.map(m => m.nLotes > 0 ? m.pergamino : null);
+  const curvaCapital = porMes.map(m => m.nLotes > 0 ? m.capital : null);
+
+  if (chartHist) chartHist.destroy();
+  chartHist = new Chart(document.getElementById('chartHistorico'), {
+    type:'line',
+    data:{labels, datasets:[
+      {label:'Kg pergamino/mes', data:curvaPergamino, borderColor:COLOR_PRIMARIO, spanGaps:false, tension:0.3},
+      {label:'Capital de trabajo/mes', data:curvaCapital, borderColor:COLOR_SECUNDARIO, spanGaps:false, tension:0.3},
+    ]},
+    options:{plugins:{legend:{position:'bottom'}}}
+  });
+}
+
+document.getElementById('selMes').addEventListener('change', renderizarMes);
+document.getElementById('selAnio').addEventListener('change', renderizarMes);
+document.getElementById('selAnioHist').addEventListener('change', renderizarHistorico);
+
+inicializarSelectores();
+cargarDatos();
+</script>
+</body>
+</html>
