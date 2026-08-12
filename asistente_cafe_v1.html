@@ -28,7 +28,7 @@ body{
   color:var(--txt);
   padding-bottom:60px;
 }
-h1,h2,h3{font-family:'DM Serif Display',serif;font-weight:400;}
+h1,h2,h3{font-family:'DM Serif Display',serif;font-weight:500;}
 header{
   background:linear-gradient(135deg,var(--primario-d),var(--primario));
   color:#fff;
@@ -176,7 +176,7 @@ table.costos tr.total td{font-weight:700;color:#fff;background:var(--primario);b
 
   <div class="tarjeta">
     <div class="aviso-maquila">
-      🏭 <strong>Soporte productivo en el CITE:</strong> esta empresa no asume depreciación, mantenimiento ni energía eléctrica — esos costos están cubiertos por el servicio CITE (tarifa Kg/hora incluida abajo).
+      🏭 <strong>Soporte productivo (maquila CITE):</strong> esta empresa no asume depreciación, mantenimiento ni energía eléctrica — esos costos están cubiertos por el servicio CITE (tarifa Kg/hora incluida abajo).
     </div>
     <h2>📋 Datos del Lote</h2>
     <div class="fila-2">
@@ -282,7 +282,7 @@ const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzzQH8M5neY_Y2t
 const NOMBRE_EMPRESA = 'Corporación Nieves E.I.R.L.';
 const CAPACIDAD_MAX_KG_MES = 220; // kg de café pergamino/mes — base de prorrateo de fijos
 
-// Balance de materia (base: 110 kg pergamino) — % merma por etapa, tomado del Excel
+// Balance de materia (base: 100 kg pergamino) — % merma por etapa, tomado del Excel
 const ETAPAS = [
   {nombre:'1. Recepción',            merma:0.0000, hMaq:0.16666666666666666, hHom:0.3333333333333333},
   {nombre:'2. Trillado y pulido',    merma:0.2200, hMaq:1.0000000000000000,  hHom:0.5},
@@ -295,9 +295,9 @@ const ETAPAS = [
   {nombre:'9. Sellado',              merma:0.0000, hMaq:0.0027777777777777775,hHom:2},
 ];
 
-// Costos variables por kg de PERGAMINO procesado (base 100 kg del Excel)
-const COSTO_SERVICIO_CITE_POR_100KG = 215.4232507915995; // tarifa Kg/hora, 6 máquinas
-const COSTO_MOD_POR_100KG = 6.731344979166666; // mano de obra directa
+// Costos variables por kg de PERGAMINO procesado (base 100 kg, escalado desde el Excel actualizado con batch de 110 kg)
+const COSTO_SERVICIO_CITE_POR_100KG = 286.14764639288; // tarifa Kg/hora, 7 procesos (Prelimpiadora/Trilladora, Seleccionadoras x3, Tostadora, Molino, Envasado)
+const COSTO_MOD_POR_100KG = 7.409110170940171; // mano de obra directa (solo etapa de Sellado, S/7.69/hora)
 
 // Empaque — por unidad de producto terminado (no por kg pergamino)
 const COSTO_ETIQUETA_UND = 0.3;
@@ -426,7 +426,7 @@ function pintarCostos(r){
   let html = `
     <tr><th>Concepto</th><th class="num">S/</th></tr>
     <tr><td>Materia prima (café pergamino)</td><td class="num">${fmt(r.costoMateriaPrima)}</td></tr>
-    <tr><td>Servicio CITE (maquila — 6 máquinas)</td><td class="num">${fmt(r.costoServicioCite)}</td></tr>
+    <tr><td>Servicio CITE (maquila — 7 procesos)</td><td class="num">${fmt(r.costoServicioCite)}</td></tr>
     <tr><td>Mano de obra directa</td><td class="num">${fmt(r.costoMOD)}</td></tr>
     <tr><td>Etiquetas</td><td class="num">${fmt(r.costoEtiqueta)}</td></tr>
     <tr><td>Bolsas polipropileno</td><td class="num">${fmt(r.costoBolsaPP)}</td></tr>
