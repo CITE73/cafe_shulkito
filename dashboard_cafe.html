@@ -101,12 +101,11 @@ td{padding:8px 6px;border-bottom:1px solid var(--borde);}
 
   <div class="tarjeta">
     <div class="filtros" style="margin-bottom:10px;">
-      <h2 style="font-size:1.1rem;">Histórico anual</h2>
+      <h2 style="font-size:1.1rem;">Total Kg tostado por mes (todos los meses del año)</h2>
       <select id="selAnioHist" style="margin-left:auto;"></select>
     </div>
     <div class="chart-wrap">
       <canvas id="chartHistorico"></canvas>
-      <div class="empty-chart" id="vacioHistorico" style="display:none;">Sin lotes registrados este año</div>
     </div>
   </div>
 
@@ -275,38 +274,71 @@ function renderizarHistorico(){
     const lotesM = TODOS_LOS_LOTES.filter(l => l.fecha && l.fecha.getFullYear()===anio && l.fecha.getMonth()===i);
     return {
       nLotes: lotesM.length,
-      pergamino: lotesM.reduce((s,l)=>s+(l.vars.kg_pergamino||0),0),
-      capital: lotesM.reduce((s,l)=>s+(l.capital_trabajo||0),0),
+      kgTostado: lotesM.reduce((s,l)=>s+(l.vars.kg_terminado||0),0),
     };
   });
   const labels = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
-  const curvaPergamino = porMes.map(m => m.nLotes > 0 ? m.pergamino : null);
-  const curvaCapital = porMes.map(m => m.nLotes > 0 ? m.capital : null);
-  const hayDatosAnio = porMes.some(m => m.nLotes > 0);
-
-  document.getElementById('chartHistorico').style.display = hayDatosAnio ? 'block' : 'none';
-  document.getElementById('vacioHistorico').style.display = hayDatosAnio ? 'none' : 'flex';
-  if (!hayDatosAnio){
-    if (chartHist) chartHist.destroy();
-    return;
-  }
+  const dataKgTostado = porMes.map(m => Math.round(m.kgTostado*10)/10);
 
   if (chartHist) chartHist.destroy();
+
+  // Plugin propio para dibujar la etiqueta "N kg" sobre cada barra con datos
+  const etiquetasValor = {
+    id: 'etiquetasValor',
+    afterDatasetsDraw(chart){
+      const {ctx} = chart;
+      const barMeta = chart.getDatasetMeta(0);
+      ctx.save();
+      ctx.font = '600 11px DM Sans, sans-serif';
+      ctx.fillStyle = '#3B1F0A';
+      ctx.textAlign = 'center';
+      barMeta.data.forEach((bar, i) => {
+        const v = dataKgTostado[i];
+        if (v > 0){
+          ctx.fillText(`${v} kg`, bar.x, bar.y - 8);
+        }
+      });
+      ctx.restore();
+    }
+  };
+
   chartHist = new Chart(document.getElementById('chartHistorico'), {
-    type:'line',
-    data:{labels, datasets:[
-      {label:'Kg pergamino/mes', data:curvaPergamino, borderColor:COLOR_PRIMARIO, backgroundColor:COLOR_PRIMARIO, spanGaps:false, tension:0.3, pointRadius:4, pointHoverRadius:6},
-      {label:'Capital de trabajo/mes', data:curvaCapital, borderColor:COLOR_SECUNDARIO, backgroundColor:COLOR_SECUNDARIO, spanGaps:false, tension:0.3, pointRadius:4, pointHoverRadius:6, yAxisID:'y1'},
-    ]},
+    data:{
+      labels,
+      datasets:[
+        {
+          type:'bar', label:'Kg tostado', data:dataKgTostado,
+          backgroundColor:COLOR_PRIMARIO, borderRadius:6,
+          maxBarThickness:56, categoryPercentage:0.6, barPercentage:0.85,
+          order:2,
+        },
+        {
+          type:'line', label:'Comportamiento', data:dataKgTostado,
+          borderColor:COLOR_SECUNDARIO, backgroundColor:COLOR_SECUNDARIO,
+          tension:0.3, pointRadius:5, pointHoverRadius:7,
+          borderWidth:2,
+          spanGaps:true, order:1,
+          segment:{ borderColor: ctx => (ctx.p0.parsed.y===0 && ctx.p1.parsed.y===0) ? 'transparent' : COLOR_SECUNDARIO },
+          pointBackgroundColor: ctx => dataKgTostado[ctx.dataIndex] > 0 ? COLOR_SECUNDARIO : 'transparent',
+          pointBorderColor: ctx => dataKgTostado[ctx.dataIndex] > 0 ? COLOR_SECUNDARIO : 'transparent',
+        },
+      ]
+    },
+    plugins:[etiquetasValor],
     options:{
       responsive:true, maintainAspectRatio:false,
-      layout:{padding:{top:8, right:8, bottom:0, left:0}},
+      layout:{padding:{top:24, right:8, bottom:0, left:0}},
       scales:{
         x:{grid:{display:false}, ticks:{color:'#7A6A57', font:{size:11}}},
-        y:{beginAtZero:true, grid:{color:'#EFE2CC'}, ticks:{color:'#7A6A57', font:{size:11}}, title:{display:true, text:'Kg pergamino', color:'#7A6A57', font:{size:10}}},
-        y1:{beginAtZero:true, position:'right', grid:{display:false}, ticks:{color:'#7A6A57', font:{size:11}}, title:{display:true, text:'Capital S/', color:'#7A6A57', font:{size:10}}},
+        y:{beginAtZero:true, grid:{color:'#EFE2CC'}, ticks:{color:'#7A6A57', font:{size:11}, callback:v=>v+' kg'}},
       },
-      plugins:{legend:{position:'bottom', labels:{color:'#2A1B10', font:{size:11}, usePointStyle:true}}},
+      plugins:{
+        legend:{position:'top', align:'start', labels:{color:'#2A1B10', font:{size:11}, usePointStyle:true, boxWidth:8}},
+        tooltip:{
+          filter: ctx => ctx.datasetIndex===0,
+          callbacks:{label: ctx => ` ${ctx.parsed.y} kg tostado`},
+        },
+      },
     }
   });
 }
